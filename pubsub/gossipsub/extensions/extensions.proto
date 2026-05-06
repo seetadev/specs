@@ -8,6 +8,10 @@ message ControlExtensions {
 
   optional bool testExtension = 6492434;
 
+  // Experimental: Large Message Segmentation
+  // Spec: ./experimental/large-message-segmentation.md
+  optional bool largeMessageSegmentation = 8473921;
+
 }
 
 message ControlMessage {
@@ -47,6 +51,10 @@ message RPC {
 
   optional TestExtension testExtension = 6492434;
 
+  // Experimental: Large Message Segmentation
+  // Spec: ./experimental/large-message-segmentation.md
+  optional LargeMessageSegmentationExtension largeSegmentation = 8473921;
+
 }
 
 message PartialMessagesExtension {
@@ -58,4 +66,12 @@ message PartialMessagesExtension {
 
   // An encoded representation of the parts a peer has and wants.
   optional bytes partsMetadata = 4;
+}
+
+message LargeMessageSegmentationExtension {
+  optional bytes  messageID     = 1;
+  optional uint32 segmentIndex  = 2;
+  optional uint32 totalSegments = 3;
+  optional bytes  payload       = 4;
+  optional bytes  checksum      = 5;
 }
