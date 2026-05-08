@@ -110,6 +110,8 @@ discard the entire reassembly buffer for that `messageID` on detection.
    `MaxMessageSize` defaults, with publishers free to choose any size at or
    below the maximum. A single fixed size is rejected because optimal sizing
    depends on MTU, topic semantics, and bandwidth.
+   The py-libp2p reference implementation defaults to 256 KiB per segment
+   payload as a practical starting point for implementations.
 
 ## Protobuf
 

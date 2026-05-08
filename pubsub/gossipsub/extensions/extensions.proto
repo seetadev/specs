@@ -10,7 +10,7 @@ message ControlExtensions {
 
   // Experimental: Large Message Segmentation
   // Spec: ./experimental/large-message-segmentation.md
-  optional bool largeMessageSegmentation = 8473921;
+  optional bool largeMessageSegmentation = 6492435;
 
 }
 
@@ -53,7 +53,7 @@ message RPC {
 
   // Experimental: Large Message Segmentation
   // Spec: ./experimental/large-message-segmentation.md
-  optional LargeMessageSegmentationExtension largeSegmentation = 8473921;
+  optional LargeMessageSegmentationExtension largeMessageSegmentation = 6492435;
 
 }
 
