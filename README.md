@@ -54,6 +54,16 @@ expected lifecycle and document formatting.
   adopting specs.
 - [Document Header][spec_header] - A standard document header for libp2p specs.
 
+### Architecture Guides
+
+These documents provide a systems-level understanding of how libp2p protocols
+interact together, useful for onboarding and cross-spec navigation.
+
+- [Protocol Stack Overview][arch_stack] - Layered architecture, transport/security/mux
+  relationships, and protocol negotiation.
+- [Connection Upgrade Flow][arch_upgrade] - Step-by-step connection lifecycle from
+  raw transport to application streams.
+
 ### Core Abstractions and Types
 
 These specs define abstractions and data types that form the "core" of libp2p
@@ -144,3 +154,5 @@ you feel an issue isn't the appropriate place for your topic, please join our
 [spec_webtransport]: ./webtransport/README.md
 [spec_ping]: ./ping/ping.md
 [spec_yamux]: ./yamux/README.md
+[arch_stack]: ./docs/architecture/protocol-stack-overview.md
+[arch_upgrade]: ./docs/architecture/connection-upgrade-flow.md
