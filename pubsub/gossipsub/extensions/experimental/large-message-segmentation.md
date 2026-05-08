@@ -43,7 +43,7 @@ The `messageID` identifies which segments belong together across the mesh.
 The `segmentIndex` communicates the ordering position for reassembly.
 The `totalSegments` tells a receiver when a full set is present.
 The `payload` carries the raw bytes for this segment.
-The `checksum` enables integrity verification before or after reassembly.
+The `checksum` is the SHA-256 hash of `messageID || segmentIndex || payload`, used for per-segment integrity verification before reassembly.
 
 ## Reconstruction
 
@@ -51,6 +51,17 @@ Receivers buffer segments by `messageID` until all expected indexes are
 available. Once all segments are present, implementations reassemble in index
 order and pass the reconstructed message through existing validation flows.
 Incomplete segment sets are discarded after a configurable window.
+
+## Interaction with Existing Gossipsub Mechanics
+
+Segments propagate through the same mesh as their parent topic. Each segment is
+itself a gossipsub message and is subject to the standard `MessageID`
+computation, IHAVE/IWANT, and IDONTWANT mechanics at the segment level. The
+`messageID` field defined in this extension identifies the parent payload only
+and is distinct from gossipsub's per-message ID computed over the segment
+envelope. Implementations MUST NOT forward a duplicate segment (same `messageID`
+plus `segmentIndex`) and SHOULD treat duplicates as a signal for IDONTWANT
+propagation.
 
 ## Interaction with Peer Scoring
 
@@ -61,11 +72,44 @@ never form a complete set are not counted as successful deliveries. If the
 delivery window expires before reconstruction completes, one approach may be to
 treat that outcome as a missed delivery for scoring purposes.
 
+## Security Considerations
+
+**Reassembly buffer exhaustion.** A malicious peer can announce large
+`totalSegments` values and send only a subset, forcing receivers to buffer
+indefinitely. Mitigations: per-peer cap on outstanding incomplete reassembly
+buffers; per-messageID memory cap derived from `totalSegments * maxSegmentSize`;
+configurable reassembly timeout after which buffers are evicted.
+
+**Segment flooding under forged messageID.** Without binding `messageID` to the
+publisher, an attacker can pollute reassembly buffers with junk segments sharing
+a victim's `messageID`. Mitigation: derive `messageID` deterministically from
+publisher identity, or require segments to carry the same publisher signature as
+the parent gossipsub message.
+
+**Last-segment withholding.** A peer can deliver `totalSegments - 1` segments
+and withhold the final one to grief reassembly. Mitigations: reassembly timeout
+with eviction; peer scoring penalty for repeatedly contributing to incomplete
+reassemblies.
+
+**Inconsistent totalSegments.** Two segments claiming the same `messageID` but
+different `totalSegments` indicate forgery or implementation bug. Receivers MUST
+discard the entire reassembly buffer for that `messageID` on detection.
+
 ## Open Questions
 
 1. Should `messageID` be application-provided or protocol-generated?
+   Tentative answer: protocol-generated as
+   `SHA-256(publisherPeerID || topic || nonce)[:16]`, set by the publisher.
+   This avoids cross-publisher collisions and lets receivers index reassembly
+   buffers without trusting application semantics. Application-provided IDs
+   remain a possible alternative where publisher-side determinism is required.
+
 2. What is the recommended maximum segment payload size, and should this be
    fixed in the spec or left to implementations?
+   Tentative answer: maximum of 1 MiB matching common gossipsub
+   `MaxMessageSize` defaults, with publishers free to choose any size at or
+   below the maximum. A single fixed size is rejected because optimal sizing
+   depends on MTU, topic semantics, and bandwidth.
 
 ## Protobuf
 
