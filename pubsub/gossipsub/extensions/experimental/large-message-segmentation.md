@@ -72,13 +72,43 @@ never form a complete set are not counted as successful deliveries. If the
 delivery window expires before reconstruction completes, one approach may be to
 treat that outcome as a missed delivery for scoring purposes.
 
+## Reassembly Lifecycle
+
+**Per-peer cap on incomplete reassemblies.** A peer MUST limit the number of
+concurrent incomplete reassemblies tracked per remote peer. The RECOMMENDED
+default is 16 per peer. This prevents resource exhaustion attacks where a single
+peer floods with partial messages that never complete.
+
+**Per-messageID memory cap.** For each in-progress reassembly, a peer MUST
+bound memory usage to `totalSegments × maxSegmentSize`. If the announced
+`totalSegments` value would cause this bound to exceed an implementation-defined
+ceiling, the message MUST be rejected at the first segment.
+
+**Reassembly timeout.** An incomplete reassembly MUST be evicted if no new
+segments arrive within a configurable timeout. The RECOMMENDED range is 60–120
+seconds, parameterizable per-topic. This mitigates last-segment-withholding
+attacks noted in Security Considerations.
+
+**MUST-discard on inconsistency.** If two segments for the same `messageID`
+announce different `totalSegments` values, the entire reassembly MUST be
+discarded and the `messageID` SHOULD be added to a short-lived deny list to
+prevent re-attack.
+
+**Successful reassembly.** Upon receiving the final outstanding segment, a peer
+MUST verify the checksum of each segment, MUST verify segment count consistency
+against `totalSegments`, and SHOULD deliver the reconstructed message to the
+application layer atomically. Reassembly state MUST be released upon delivery.
+
+**Eviction policy.** When the per-peer cap is reached, implementations MAY use
+LRU eviction to discard the least-recently-active incomplete reassembly. Evicted
+reassemblies MUST NOT be silently restarted by the receiver; the publisher must
+re-segment and retransmit if needed.
+
 ## Security Considerations
 
 **Reassembly buffer exhaustion.** A malicious peer can announce large
 `totalSegments` values and send only a subset, forcing receivers to buffer
-indefinitely. Mitigations: per-peer cap on outstanding incomplete reassembly
-buffers; per-messageID memory cap derived from `totalSegments * maxSegmentSize`;
-configurable reassembly timeout after which buffers are evicted.
+indefinitely. See §Reassembly Lifecycle for normative mitigations.
 
 **Segment flooding under forged messageID.** Without binding `messageID` to the
 publisher, an attacker can pollute reassembly buffers with junk segments sharing
@@ -87,13 +117,12 @@ publisher identity, or require segments to carry the same publisher signature as
 the parent gossipsub message.
 
 **Last-segment withholding.** A peer can deliver `totalSegments - 1` segments
-and withhold the final one to grief reassembly. Mitigations: reassembly timeout
-with eviction; peer scoring penalty for repeatedly contributing to incomplete
-reassemblies.
+and withhold the final one to grief reassembly. See §Reassembly Lifecycle for
+normative mitigations.
 
 **Inconsistent totalSegments.** Two segments claiming the same `messageID` but
-different `totalSegments` indicate forgery or implementation bug. Receivers MUST
-discard the entire reassembly buffer for that `messageID` on detection.
+different `totalSegments` indicate forgery or implementation bug. See §Reassembly
+Lifecycle for the normative MUST-discard rule.
 
 ## Open Questions
 
