@@ -230,6 +230,44 @@ Some applications may be able to infer updates to `partsMetadata` from sent and
 received messages. Applications SHOULD leverage this to reduce the number of
 messages sent to a peer.
 
+## Interaction with Peer Scoring (v1.1)
+
+Partial Messages interact with the Peer Scoring system (see [gossipsub v1.1](./gossipsub-v1.1.md)) to ensure network quality and prevent resource exhaustion attacks.
+
+### P₂: First Message Deliveries
+
+When a Full Message is successfully reassembled and validated, it is considered a "First Delivery" if no other peer has delivered the Full Message yet.
+
+1. **Eligible Contributors**: All peers that provided unique, valid segments used in the reassembly are considered "eligible contributors" for first-delivery credit.
+2. **Attribution Strategy**: Implementations MUST define a strategy for attributing `P₂` credit among eligible contributors. This strategy SHOULD discourage "last segment wins" incentives, where a peer might wait for others to provide the bulk of a message before sending the final part to claim full credit.
+3. **Late Deliveries**: Segments received after the message reassembly is complete MUST NOT receive `P₂` credit. However, their contribution SHOULD be used to satisfy `P₃` (Mesh Message Delivery Rate) if the peer is in the mesh.
+
+### P₃: Mesh Message Delivery Rate
+
+A peer in the mesh that contributes one or more segments to a Full Message that is eventually successfully reassembled SHOULD receive credit towards its `P₃` counter. Delivering valid, requested segments demonstrates active participation in the topic, even if the peer does not provide the Full Message.
+
+### P₄: Invalid Messages
+
+1. **Immediate Penalty**: If an application can validate a `partialMessage` or a single `Message Part` in isolation (e.g., via erasure code checksums or per-part signatures), and the part is found to be invalid, the delivering peer MUST be penalized with `P₄` immediately.
+2. **Delayed Penalty**: If a message can only be invalidated after full reassembly, all peers that contributed to the invalid message MAY be penalized, although implementations SHOULD attempt to isolate the faulty peer(s) if possible.
+
+### P₇: Behavioural Penalties
+
+Implementations MUST apply `P₇` penalties in the following scenarios:
+
+1. **Partial Message Flood**: A peer that initiates more than `MaxPendingReassemblies` reassembly sessions without completing them (across all topics).
+2. **Broken Promise**: A peer that repeatedly advertises parts via `partsMetadata` but fails to deliver them when explicitly requested via `IWANT` or equivalent mechanisms, beyond what can be reasonably attributed to network churn or transient packet loss.
+3. **Invalid Group ID**: A peer that sends `partialMessage` or `partsMetadata` with a Group ID that does not conform to application-defined structure.
+
+## Resource Management and DoS Mitigations
+
+To prevent resource exhaustion through segmented message floods, implementations MUST provide bounded-memory guarantees even under adversarial conditions:
+
+1. **Bounded Reassembly Buffer**: Each topic MUST have a bounded memory pool for partial message reassembly.
+2. **Per-Peer Limits**: Implementations MUST limit the number of concurrent reassembly sessions any single peer can initiate.
+3. **Reassembly Timeout and Cleanup**: Each partial message reassembly session MUST have a timeout. Upon timeout, the buffer MUST be cleared. Cleanup of expired or orphaned reassembly sessions SHOULD be performed in `O(1)` or amortized constant-time (e.g., using a circular buffer or doubly-linked list with TTL-based eviction) to prevent CPU exhaustion.
+4. **Eager Data Limits**: Implementations MUST limit the amount of "Eager Data" accepted from any peer before a `partsMetadata` exchange has occurred.
+
 ## Upgrading a topic to use partial messages
 
 Rolling out partial messages on an existing topic allows for incremental
