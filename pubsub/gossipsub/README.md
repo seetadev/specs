@@ -19,6 +19,7 @@ If you are new to Gossipsub and/or PubSub in general, we recommend you to first:
 - [gossipsub-v1.2](gossipsub-v1.2.md): v1.2 of the gossipsub protocol. This includes the aggregation of the IDONTWANT control messages to the specs.
 - [gossipsub-v1.3](gossipsub-v1.3.md): v1.3 of the gossipsub protocol. Introduces the Extensions Control Message framework.
 - [gossipsub-v1.4](gossipsub-v1.4.md): v1.4 of the gossipsub protocol. Large message propagation via fragmentation, staggering, PREAMBLE, and IMRECEIVING.
+  - [Design Document](design-document.md): Architectural rationale, prototype analysis (nim-libp2p, py-libp2p), and design decisions for the v1.4 specification.
 - [(not in use) episub](episub.md): a research note on a protocol building on top of gossipsub to implement [epidemic broadcast trees](https://www.gsd.inesc-id.pt/~ler/reports/srds07.pdf).
 
 ## Implementation status

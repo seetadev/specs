@@ -4,11 +4,11 @@
 | --------------- | ------------- | ------ | --------------- |
 | 1A              | Working Draft | Active | r0, 2026-05-11  |
 
-Authors: [@NamanVSrivastav]
+Authors: [@NomzzNJS]
 
 Interest Group: TBD
 
-[@NamanVSrivastav]: https://github.com/NamanVSrivastav
+[@NomzzNJS]: https://github.com/NomzzNJS
 
 See the [lifecycle document][lifecycle-spec] for context about the maturity level
 and spec status.
