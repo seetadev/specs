@@ -21,7 +21,7 @@ message ControlMessage {
 
 message RPC {
   message SubOpts {
-    optional bool subscribe = 1; // subscribe or unsubcribe
+    optional bool subscribe = 1; // subscribe or unsubscribe
     optional string topicid = 2;
 
     // Used with Partial Messages extension.
@@ -59,3 +59,7 @@ message PartialMessagesExtension {
   // An encoded representation of the parts a peer has and wants.
   optional bytes partsMetadata = 4;
 }
+
+// TestExtension: empty message used for Gossipsub extension interoperability
+// testing. See extensions/experimental/test-extension.md.
+message TestExtension {}
