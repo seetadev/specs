@@ -146,7 +146,7 @@ connections across the various permutations of the two dimensions.
 
   Peers will be able to communicate via the established [circuit relay v2
   protocol][circuit-relay-v2] connection. Though this connection is limited in
-  both transfered bytes and time. For now, upper layer protocols need to cope
+  both transferred bytes and time. For now, upper layer protocols need to cope
   with the fact that full connectivity can not be guaranteed.
 
 - **Why use both [AutoNAT] and [STUN], why not settle on one for both TCP / QUIC

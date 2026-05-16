@@ -37,7 +37,7 @@ specifications to detail currently unspecified parts of libp2p.
 
 This document replaces an earlier RFC, which still contains much useful
 information and is helpful for understanding the libp2p design philosophy. It is
-avaliable at [_archive/README.md](./_archive/README.md).
+available at [_archive/README.md](./_archive/README.md).
 
 ## Specification Index
 
@@ -81,7 +81,7 @@ see [#465](https://github.com/libp2p/specs/issues/465).
 
 - [ping][spec_ping] - Ping protocol
 - [autonat][spec_autonat] - NAT detection
-- [identify][spec_identify] -  Exchange keys and addresses with other peers
+- [identify][spec_identify] - Exchange keys and addresses with other peers
 - [kademlia][spec_kademlia] - The Kademlia Distributed Hash Table (DHT) subsystem
 - [mdns][spec_mdns] - Local peer discovery with zero configuration using multicast DNS
 - [mplex][spec_mplex] - The friendly stream multiplexer

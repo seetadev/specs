@@ -211,8 +211,8 @@ message CircuitRelay {
 ### Under the microscope
 
 - We've defined a max length for the multiaddrs of arbitrarily 1024 bytes
-- Multiaddrs are transfered on its binary packed format
-- Peer Ids are transfered on its non base encoded format (aka byte array containing the multihash of the Public Key).
+- Multiaddrs are transferred on its binary packed format
+- Peer Ids are transferred on its non base encoded format (aka byte array containing the multihash of the Public Key).
 
 
 ### Status codes table
