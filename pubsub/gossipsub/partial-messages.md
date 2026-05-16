@@ -175,6 +175,67 @@ When Gossiping, a node that supports partial messages SHOULD NOT send an `IHAVE`
 to a peer that requested partial messages. The node SHOULD send a partial message
 instead.
 
+## Sequence Diagrams
+
+### Extension Negotiation
+
+Peers use the subscription options to negotiate support for the Partial Messages extension. Setting `requestsPartial` to true indicates a preference for receiving partial messages, while `supportsSendingPartial` signals the ability to serve them.
+
+```mermaid
+sequenceDiagram
+    participant PeerA
+    participant PeerB
+    Note over PeerA, PeerB: Topic Subscription
+    PeerA->>PeerB: SubOpts(topic, requestsPartial=true, supportsSendingPartial=true)
+    PeerB->>PeerA: SubOpts(topic, supportsSendingPartial=true)
+    Note over PeerA, PeerB: Negotiation Complete: PeerB will send partials to PeerA
+```
+
+### Eager Push Flow
+
+A publisher can choose to send "Eager Data"—initial parts of a message—directly to a peer without waiting for a request or metadata exchange. This minimizes latency for large message propagation.
+
+```mermaid
+sequenceDiagram
+    participant Publisher
+    participant Peer
+    Note over Publisher, Peer: Publisher has large message
+    Publisher->>Peer: PartialMessagesExtension(groupID, partialMessage=EagerData)
+    Note over Peer: Application receives initial parts
+    Note over Publisher, Peer: Peer may send partsMetadata to request remaining parts
+    Peer->>Publisher: PartialMessagesExtension(groupID, partsMetadata=MissingParts)
+    Publisher->>Peer: PartialMessagesExtension(groupID, partialMessage=RemainingParts)
+```
+
+### partsMetadata Exchange Flow
+
+Peers use `partsMetadata` to synchronize which parts of a message they already possess. Upon receiving metadata, a peer responds with the specific missing parts, enabling efficient reassembly.
+
+```mermaid
+sequenceDiagram
+    participant PeerA
+    participant PeerB
+    PeerA->>PeerB: PartialMessagesExtension(groupID, partsMetadata=BitmapOfHeldParts)
+    Note over PeerB: Identify missing parts for PeerA
+    PeerB->>PeerA: PartialMessagesExtension(groupID, partialMessage=MissingParts)
+    Note over PeerA: Reassemble full message
+```
+
+### Heartbeat Gossip with Partial Messages
+
+During the periodic heartbeat, a node can announce held parts to non-mesh peers using `partsMetadata`. This replaces the standard `IHAVE` gossip with more granular information, allowing peers to synchronize missing parts.
+
+```mermaid
+sequenceDiagram
+    participant Node
+    participant NonMeshPeer
+    Note over Node: Heartbeat Triggered
+    Node->>NonMeshPeer: PartialMessagesExtension(groupID, partsMetadata=HeldParts)
+    Note over NonMeshPeer: Check if parts are needed
+    NonMeshPeer->>Node: PartialMessagesExtension(groupID, partsMetadata=RequestedParts)
+    Node->>NonMeshPeer: PartialMessagesExtension(groupID, partialMessage=RequestedParts)
+```
+
 ## Application-Library Interface
 
 Both `partsMetadata` and `partialMessage` in the Partial Message RPC are
