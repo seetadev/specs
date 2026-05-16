@@ -1,61 +1,241 @@
 syntax = "proto2";
 
+// =====================================================================
+// ControlExtensions — Extension capability advertisement (v1.3)
+//
+// Sent in the first RPC on a new stream to advertise supported
+// extensions. See gossipsub-v1.3.md for the framework specification.
+// =====================================================================
+
 message ControlExtensions {
+    // Canonical extension: Partial Messages
+    // See: partial-messages.md
     optional bool partialMessages = 10;
 
-  // Experimental extensions must use field numbers larger than 0x200000 to be
-  // encoded with at least 4 bytes
+    // Canonical extension: Large Message Handling (v1.4)
+    // When true, the peer supports message fragmentation, staggering,
+    // PREAMBLE, and IMRECEIVING mechanisms for efficient large message
+    // propagation. See: gossipsub-v1.4.md, wire-format-v1.4.md
+    optional bool largeMessageHandling = 11;
 
-  optional bool testExtension = 6492434;
+    // Experimental extensions must use field numbers larger than 0x200000
+    // to be encoded with at least 4 bytes (varint). This prevents
+    // collisions with canonical extensions.
+
+    optional bool testExtension = 6492434;
 
 }
+
+// =====================================================================
+// ControlMessage — Gossipsub routing control messages
+//
+// Contains all control signaling for mesh management, gossip,
+// redundancy suppression, and large message coordination.
+// =====================================================================
 
 message ControlMessage {
-  repeated ControlIHave ihave = 1;
-  repeated ControlIWant iwant = 2;
-  repeated ControlGraft graft = 3;
-  repeated ControlPrune prune = 4;
-  repeated ControlIDontWant idontwant = 5;
-  optional ControlExtensions extensions = 6;
+    // v1.0: Mesh gossip — "I have these message IDs"
+    repeated ControlIHave ihave = 1;
+    // v1.0: Mesh gossip — "Send me these messages"
+    repeated ControlIWant iwant = 2;
+    // v1.0: Mesh management — "Add me to your mesh for this topic"
+    repeated ControlGraft graft = 3;
+    // v1.0: Mesh management — "Remove me from your mesh for this topic"
+    repeated ControlPrune prune = 4;
+
+    // v1.2: Redundancy suppression — "I already have this, don't send it"
+    repeated ControlIDontWant idontwant = 5;
+
+    // v1.3: Extension capability advertisement
+    optional ControlExtensions extensions = 6;
+
+    // v1.4: Large message pre-announcement
+    // Sent before transmitting a large message to announce its ID and size.
+    // See: wire-format-v1.4.md §2, segmentation-mechanisms.md §7
+    repeated ControlPreamble preamble = 7;
+
+    // v1.4: In-progress reception signal
+    // Sent when a peer begins receiving a large message, enabling
+    // immediate suppression of redundant sends from other mesh peers.
+    // See: wire-format-v1.4.md §2, segmentation-mechanisms.md §7
+    repeated ControlImReceiving imreceiving = 8;
 }
+
+// =====================================================================
+// RPC — Top-level gossipsub Remote Procedure Call message
+//
+// Every gossipsub message exchanged between peers is an RPC.
+// An RPC can contain subscriptions, published messages, control
+// messages, and extension data.
+// =====================================================================
 
 message RPC {
-  message SubOpts {
-    optional bool subscribe = 1; // subscribe or unsubcribe
-    optional string topicid = 2;
+    message SubOpts {
+        optional bool subscribe = 1; // subscribe or unsubcribe
+        optional string topicid = 2;
 
-    // Used with Partial Messages extension.
-    // If set to true, signals to the receiver that the sender prefers partial
-    // messages.
-    optional bool requestsPartial = 3;
-    // If set to true, signals to the receiver that the sender supports sending
-    // partial messages on this topic. If requestsPartial is true, this is
-    // assumed to be true.
-    optional bool supportsSendingPartial = 4;
-  }
+        // Used with Partial Messages extension.
+        // If set to true, signals to the receiver that the sender prefers
+        // partial messages.
+        optional bool requestsPartial = 3;
+        // If set to true, signals to the receiver that the sender supports
+        // sending partial messages on this topic. If requestsPartial is
+        // true, this is assumed to be true.
+        optional bool supportsSendingPartial = 4;
+    }
 
-  repeated SubOpts subscriptions = 1;
-  repeated Message publish = 2;
-  optional ControlMessage control = 3;
+    repeated SubOpts subscriptions = 1;
+    repeated Message publish = 2;
+    optional ControlMessage control = 3;
 
-  // Canonical Extensions should register their messages here.
-  optional PartialMessagesExtension partial = 10;
+    // Canonical Extensions should register their messages here.
+    optional PartialMessagesExtension partial = 10;
 
-  // Experimental Extensions should register their messages here. They
-  // must use field numbers larger than 0x200000 to be encoded with at least 4
-  // bytes
+    // v1.4: Large message fragments
+    // Placed at RPC level (not inside ControlMessage) because fragments
+    // carry application data payload, not control/routing metadata.
+    // This follows the pattern of publish[] (data) vs ControlMessage
+    // (routing). See: wire-format-v1.4.md §6.2
+    repeated LargeMessageFragment largeMessageFragments = 12;
 
-  optional TestExtension testExtension = 6492434;
+    // Experimental Extensions should register their messages here. They
+    // must use field numbers larger than 0x200000 to be encoded with at
+    // least 4 bytes
+
+    optional TestExtension testExtension = 6492434;
 
 }
+
+// =====================================================================
+// Partial Messages Extension
+// =====================================================================
 
 message PartialMessagesExtension {
-  optional bytes topicID = 1;
-  optional bytes groupID = 2;
+    optional bytes topicID = 1;
+    optional bytes groupID = 2;
 
-  // An encoded partial message
-  optional bytes partialMessage = 3;
+    // An encoded partial message
+    optional bytes partialMessage = 3;
 
-  // An encoded representation of the parts a peer has and wants.
-  optional bytes partsMetadata = 4;
+    // An encoded representation of the parts a peer has and wants.
+    optional bytes partsMetadata = 4;
 }
+
+// =====================================================================
+// v1.4: Large Message Handling — New Message Types
+//
+// These messages implement the four mechanisms defined in the Gossipsub
+// v1.4 specification for efficient large message propagation:
+//   1. Message Fragmentation (LargeMessageFragment)
+//   2. Message Staggering (behavioral, no new wire type)
+//   3. PREAMBLE (ControlPreamble)
+//   4. IMRECEIVING (ControlImReceiving)
+//
+// References:
+//   - gossipsub-v1.4.md (normative specification)
+//   - wire-format-v1.4.md (wire encoding details)
+//   - segmentation-mechanisms.md (algorithms and state machines)
+//   - arXiv:2504.10365 (staggering and fragmentation research)
+//   - arXiv:2505.17337 (PREAMBLE and IMRECEIVING research)
+// =====================================================================
+
+// PREAMBLE: Pre-announcement of a large message.
+//
+// Sent by a peer BEFORE it begins transmitting a large message (or its
+// fragments) to each mesh peer in the topic. This allows receivers to:
+//   - Pre-allocate reassembly buffers of the correct size
+//   - Respond with IDONTWANT if they already have the message
+//   - Broadcast IMRECEIVING to suppress redundant sends
+//
+// Timing: PREAMBLE MUST be sent before any LargeMessageFragment for the
+// same messageID. PREAMBLE SHOULD be sent immediately, even when
+// staggering is in effect (staggering only delays data, not PREAMBLEs).
+//
+// Size threshold: PREAMBLE SHOULD only be sent for messages exceeding
+// the preamble_threshold parameter (default: 64 KiB).
+message ControlPreamble {
+    // The message ID of the message about to be transmitted.
+    // MUST be computed using the same message ID function as standard
+    // gossipsub messages (applied to the full, unfragmented payload).
+    // Typical size: 32 bytes (SHA-256).
+    optional bytes messageID = 1;
+
+    // Total size of the full message payload in bytes (before
+    // fragmentation). Receivers use this to pre-allocate reassembly
+    // buffers and to validate totalFragments against fragment_size.
+    optional uint64 messageSize = 2;
+
+    // The topic ID this message belongs to.
+    // MUST match the topicID in corresponding LargeMessageFragment
+    // messages.
+    optional string topicID = 3;
+}
+
+// IMRECEIVING: In-progress reception signal.
+//
+// Sent by a peer that is CURRENTLY IN THE PROCESS of receiving a large
+// message. Triggered by:
+//   - Receiving a ControlPreamble for a new message
+//   - Receiving the first LargeMessageFragment for a new message
+//
+// Purpose: Fills the timing gap left by IDONTWANT (v1.2), which can
+// only be sent AFTER full reception. IMRECEIVING provides IMMEDIATE
+// suppression during the (potentially long) reception window.
+//
+// Semantics: ADVISORY ONLY. A peer receiving IMRECEIVING:
+//   - SHOULD add messageID to the sender's dont_send_message_ids set
+//   - MAY still send the message (MUST NOT be penalized for doing so)
+//
+// Entries added by IMRECEIVING are pruned during heartbeat processing,
+// using the same strategy as IDONTWANT entries.
+message ControlImReceiving {
+    // The message ID currently being received.
+    // MUST match a messageID from a previously received ControlPreamble
+    // or LargeMessageFragment.
+    optional bytes messageID = 1;
+}
+
+// LargeMessageFragment: A single fragment of a fragmented large message.
+//
+// When a message exceeds fragmentation_threshold, the sender splits it
+// into fragments of at most fragment_size bytes. Each fragment is
+// transmitted as an independent LargeMessageFragment within the RPC.
+//
+// KEY OPTIMIZATION: Intermediate peers SHOULD forward individual
+// fragments as they arrive, WITHOUT waiting for full reassembly. This
+// enables pipeline-parallel relay, reducing store-and-forward latency
+// from O(hops × message_size) to approximately O(hops × fragment_size).
+//
+// Reassembly: The receiver collects all fragments [0, totalFragments)
+// for a given messageID, concatenates fragmentData in fragmentIndex
+// order, and validates the reassembled message.
+//
+// Placement: This message is in the RPC (not ControlMessage) because
+// it carries application data payload, following the pattern of the
+// existing publish[] field.
+message LargeMessageFragment {
+    // The full message ID this fragment belongs to.
+    // MUST be identical across all fragments of the same message.
+    // MUST match any corresponding ControlPreamble.messageID.
+    optional bytes messageID = 1;
+
+    // 0-based index of this fragment in the sequence.
+    // Constraint: 0 <= fragmentIndex < totalFragments
+    optional uint32 fragmentIndex = 2;
+
+    // Total number of fragments for this message.
+    // MUST be consistent across all fragments of the same messageID.
+    // Computed as: ceil(original_message_size / fragment_size)
+    optional uint32 totalFragments = 3;
+
+    // The fragment payload data.
+    // For fragments [0, totalFragments-2]: size MUST equal fragment_size.
+    // For the last fragment (totalFragments-1): size MAY be smaller.
+    // Constraint: 1 <= len(fragmentData) <= fragment_size
+    optional bytes fragmentData = 4;
+
+    // The topic ID the original message belongs to.
+    // MUST be consistent across all fragments of the same messageID.
+    optional string topicID = 5;
+}
+
