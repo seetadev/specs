@@ -326,7 +326,7 @@ in network (big endian) byte order.
 The first packet transmitted by each peer must be the remote peer's nonce.
 
 Each peer will decrypt the message body and validate the HMAC signature,
-comparing the decrypted output to the nonce recieved in the initial
+comparing the decrypted output to the nonce received in the initial
 `Propose` message. If either peer is unable to validate the initial
 packet against the known nonce, they must abort the connection.
 

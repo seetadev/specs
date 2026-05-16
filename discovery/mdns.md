@@ -111,7 +111,7 @@ On receipt of a `find all peers` query, the following **additional records** sho
 
 ### Gotchas
 
-Many existing tools ignore the Additional Records, and always send individual queries for the peer's discovery details. To accomodate this, a peer should respond to the following queries:
+Many existing tools ignore the Additional Records, and always send individual queries for the peer's discovery details. To accommodate this, a peer should respond to the following queries:
 
 - `<peer-name>.<service-name> SRV`
 - `<peer-name>.<service-name> TXT`

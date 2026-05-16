@@ -123,7 +123,7 @@ If the server was unable to connect to the client on the selected address,
 publicly reachable.
 
 If the server was able to connect to the client on the selected address, but an
-error occured while sending an nonce on the `/libp2p/autonat/2/dial-back`
+error occurred while sending a nonce on the `/libp2p/autonat/2/dial-back`
 stream, `DialStatus` is set to `E_DIAL_BACK_ERROR`. This might happen in case of
 resource limited situations on client or server, or when either the client or
 the server is misconfigured.
@@ -142,7 +142,7 @@ limiting, resource limit reached or blacklisting.
 `E_DIAL_REFUSED`: The server didn't dial back any address because it was
 incapable of dialing or unwilling to dial any of the requested addresses.
 
-`E_INTERNAL_ERROR`: Error not classified within the above error codes occured on
+`E_INTERNAL_ERROR`: Error not classified within the above error codes occurred on
 server preventing it from completing the request.
 
 `OK`: The server completed the request successfully. A request is considered
